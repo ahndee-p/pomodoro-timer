@@ -2,6 +2,7 @@ let timeLeft;
 let timerId = null;
 let isWorkTime = true;
 let completedSessions = 0;
+let lastTimestamp = null;
 
 const minutesDisplay = document.getElementById('minutes');
 const secondsDisplay = document.getElementById('seconds');
@@ -27,23 +28,18 @@ function updateDisplay() {
     secondsDisplay.textContent = seconds.toString().padStart(2, '0');
 }
 
-function startTimer() {
-    if (timerId !== null) return;
-
-    if (!timeLeft) {
-        timeLeft = WORK_TIME;
-        isWorkTime = true;
-        statusText.textContent = 'Work Time!';
+function tick(timestamp) {
+    if (!lastTimestamp) {
+        lastTimestamp = timestamp;
     }
 
-    timerId = setInterval(() => {
-        timeLeft--;
-        updateDisplay();
+    const elapsed = Math.floor((timestamp - lastTimestamp) / 1000);
+    
+    if (elapsed >= 1) {
+        timeLeft -= elapsed;
+        lastTimestamp = timestamp;
 
         if (timeLeft <= 0) {
-            clearInterval(timerId);
-            timerId = null;
-            
             if (isWorkTime) {
                 completedSessions++;
                 sessionsDisplay.textContent = `Completed Sessions: ${completedSessions}`;
@@ -55,18 +51,33 @@ function startTimer() {
                 isWorkTime = true;
                 statusText.textContent = 'Work Time!';
             }
-            
-            updateDisplay();
-            startTimer();
         }
-    }, 1000);
+        
+        updateDisplay();
+    }
 
+    if (timerId !== null) {
+        requestAnimationFrame(tick);
+    }
+}
+
+function startTimer() {
+    if (timerId !== null) return;
+
+    if (!timeLeft) {
+        timeLeft = WORK_TIME;
+        isWorkTime = true;
+        statusText.textContent = 'Work Time!';
+    }
+
+    lastTimestamp = null;
+    timerId = requestAnimationFrame(tick);
     startButton.textContent = 'Pause';
 }
 
 function resetTimer() {
-    clearInterval(timerId);
     timerId = null;
+    lastTimestamp = null;
     timeLeft = WORK_TIME;
     isWorkTime = true;
     statusText.textContent = 'Work Time!';
@@ -80,7 +91,6 @@ startButton.addEventListener('click', () => {
     if (timerId === null) {
         startTimer();
     } else {
-        clearInterval(timerId);
         timerId = null;
         startButton.textContent = 'Start';
     }
